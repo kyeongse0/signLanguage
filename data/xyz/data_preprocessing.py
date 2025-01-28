@@ -5,7 +5,7 @@ from tensorflow.keras.utils import to_categorical
 import random
 
 # 데이터 경로 및 설정
-DATA_PATH = 'data'  # 수집된 데이터 경로
+DATA_PATH = '../data'  # 수집된 데이터 경로
 GESTURES = ['ㄱ', 'ㄴ', 'ㄷ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅅ', 'ㅇ', 'ㅈ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ',
             'ㅏ', 'ㅑ', 'ㅓ', 'ㅕ', 'ㅗ', 'ㅛ', 'ㅜ', 'ㅠ', 'ㅡ', 'ㅣ',
             'ㅐ', 'ㅒ', 'ㅔ', 'ㅖ', 'ㅢ', 'ㅚ', 'ㅟ',
