@@ -5,10 +5,10 @@ from tensorflow.keras.layers import LSTM, Dense, Dropout
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
 
 # 데이터 로드
-X_train = np.load('../data/X_ztrain.npy')
-X_valid = np.load('../data/X_zvalid.npy')
-y_train = np.load('../data/y_ztrain.npy')
-y_valid = np.load('../data/y_zvalid.npy')
+X_train = np.load('../data/xy/X_ztrain.npy')
+X_valid = np.load('../data/xy/X_zvalid.npy')
+y_train = np.load('../data/xy/y_ztrain.npy')
+y_valid = np.load('../data/xy/y_zvalid.npy')
 
 print(f"X_train shape: {X_train.shape}, y_train shape: {y_train.shape}")
 print(f"X_valid shape: {X_valid.shape}, y_valid shape: {y_valid.shape}")
@@ -44,7 +44,7 @@ model.compile(optimizer=optimizer, loss='categorical_crossentropy', metrics=['ac
 
 # 콜백 설정
 early_stopping = EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)  # patience 값 조정 및 가중치 복원 추가
-checkpoint = ModelCheckpoint('best_model_z.h5', monitor='val_loss', save_best_only=True)
+checkpoint = ModelCheckpoint('best_model_z3.h5', monitor='val_loss', save_best_only=True)
 reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=3)
 
 # 모델 학습
@@ -58,4 +58,4 @@ history = model.fit(
 )
 
 # 최종 모델 저장 (학습 종료 후 마지막 상태 저장)
-model.save('cnn_lstm_sign_language_model_optimized.h5')
+model.save('cnn_lstm_sign_language_model_optimized_3.h5')
