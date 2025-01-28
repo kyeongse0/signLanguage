@@ -10,7 +10,7 @@ GESTURES = ['ㄱ', 'ㄴ', 'ㄷ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅅ', 'ㅇ', 'ㅈ', 'ㅊ'
             'ㅏ', 'ㅑ', 'ㅓ', 'ㅕ', 'ㅗ', 'ㅛ', 'ㅜ', 'ㅠ', 'ㅡ', 'ㅣ',
             'ㅐ', 'ㅒ', 'ㅔ', 'ㅖ', 'ㅢ', 'ㅚ', 'ㅟ',
             'ㄲ', 'ㄸ', 'ㅃ', 'ㅆ', 'ㅉ']  # 제스처 목록
-SEQUENCES = 30  # 제스처당 시퀀스 개수
+SEQUENCES = 90  # 제스처당 시퀀스 개수
 FRAMES = 30  # 시퀀스당 프레임 개수
 IMAGE_SIZE = (64, 64)  # CNN 입력 크기 (64x64)
 
@@ -21,29 +21,6 @@ def add_noise(sequence, noise_level=0.01):
     noise = np.random.normal(0, noise_level, sequence.shape)
     return sequence + noise
 
-
-def time_warp(sequence, max_warp=5):
-    """시퀀스를 시간적으로 왜곡"""
-    warp_amount = random.randint(-max_warp, max_warp)
-    if warp_amount > 0:
-        return np.pad(sequence[:-warp_amount], ((warp_amount, 0), (0, 0)), mode='constant')
-    elif warp_amount < 0:
-        return np.pad(sequence[-warp_amount:], ((0, -warp_amount), (0, 0)), mode='constant')
-    return sequence
-
-
-def scaling(sequence, scale_factor=1.2):
-    """시퀀스 크기 조정"""
-    return sequence * scale_factor
-
-
-def augment_sequence(sequence):
-    """랜덤으로 증강 기법 적용"""
-    augmentations = [add_noise, time_warp, scaling]
-    augmented_sequence = sequence.copy()
-    for aug in random.sample(augmentations, k=random.randint(1, len(augmentations))):
-        augmented_sequence = aug(augmented_sequence)
-    return augmented_sequence
 
 
 def pad_or_trim_sequence(sequence, target_length):
@@ -88,7 +65,7 @@ for idx, gesture in enumerate(GESTURES):
         y_labels.append(idx)  # y 대신 y_labels 사용
 
         # 증강된 데이터 추가
-        augmented_frames = augment_sequence(frames)
+        augmented_frames = add_noise(frames)
         augmented_frames_reshaped = []
         for frame in augmented_frames:
             frame_image_augmented = np.zeros(IMAGE_SIZE)
@@ -111,14 +88,18 @@ X = np.array(X).astype('float32')  # Shape: (samples, FRAMES, IMAGE_SIZE[0], IMA
 X = X[..., np.newaxis]             # Shape: (samples, FRAMES, IMAGE_SIZE[0], IMAGE_SIZE[1], 1)
 y_labels = to_categorical(y_labels).astype(int)  # One-hot 인코딩
 
-# 데이터 분리 (80% 학습 / 20% 테스트)
-X_train, X_test, y_train, y_test = train_test_split(X, y_labels, test_size=0.2, random_state=42)
+# 데이터 분리 (7:2:1 - train:validation:test)
+X_train, X_temp, y_train, y_temp = train_test_split(X, y_labels, test_size=0.3, random_state=42)
+X_valid, X_test, y_valid, y_test = train_test_split(X_temp, y_temp, test_size=0.33, random_state=42)
 
 # 데이터 저장
-#np.save('X_train.npy', X_train)
-#np.save('X_test.npy', X_test)
-#np.save('y_train.npy', y_train)
-#np.save('y_test.npy', y_test)
+np.save('X_train.npy', X_train)
+np.save('X_test.npy', X_test)
+np.save('X_valid.npy', X_valid)
+np.save('y_train.npy', y_train)
+np.save('y_test.npy', y_test)
+np.save('y_valid.npy', y_valid)
 
 print(f"X_train shape: {X_train.shape}, y_train shape: {y_train.shape}")
+print(f"X_valid shape: {X_valid.shape}, y_valid shape: {y_valid.shape}")
 print(f"X_test shape: {X_test.shape}, y_test shape: {y_test.shape}")

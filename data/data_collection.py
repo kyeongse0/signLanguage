@@ -10,7 +10,7 @@ mp_drawing = mp.solutions.drawing_utils
 
 # 데이터 저장 경로 및 제스처 설정
 DATA_PATH = 'data'  # 데이터 저장 경로
-GESTURES = ['ㅉ']  # 제스처 목록
+GESTURES = ['ㅢ']  # 제스처 목록
 '''
 GESTURES = ['ㄱ', 'ㄴ', 'ㄷ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅅ', 'ㅇ', 'ㅈ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ',
             'ㅏ', 'ㅑ', 'ㅓ', 'ㅕ', 'ㅗ', 'ㅛ', 'ㅜ', 'ㅠ', 'ㅡ', 'ㅣ',
@@ -33,9 +33,13 @@ for gesture in GESTURES:
 cap = cv2.VideoCapture(0)
 with mp_hands.Hands(min_detection_confidence=0.5, min_tracking_confidence=0.5) as hands:
     for gesture in GESTURES:
-        for sequence in range(SEQUENCES):
+        # 이미 존재하는 파일 개수 확인
+        gesture_path = os.path.join(DATA_PATH, gesture)
+        existing_files = len([f for f in os.listdir(gesture_path) if f.endswith('.npy')])
+
+        for sequence in range(existing_files, existing_files + SEQUENCES):  # 이어서 저장
             frames = []
-            print(f"Collecting data for {gesture}, sequence {sequence + 1}/{SEQUENCES}")
+            print(f"Collecting data for {gesture}, sequence {sequence + 1}/{existing_files + SEQUENCES}")
 
             for frame_num in range(FRAMES):
                 ret, frame = cap.read()
@@ -62,7 +66,7 @@ with mp_hands.Hands(min_detection_confidence=0.5, min_tracking_confidence=0.5) a
                 draw = ImageDraw.Draw(frame_pil)
 
                 # 현재 제스처와 진행 상태 표시 (한글 출력)
-                text = f"제스처: {gesture} | 시퀀스: {sequence + 1}/{SEQUENCES} | 프레임: {frame_num + 1}/{FRAMES}"
+                text = f"제스처: {gesture} | 시퀀스: {sequence + 1}/{existing_files + SEQUENCES} | 프레임: {frame_num + 1}/{FRAMES}"
                 draw.text((10, 10), text, font=font, fill=(255, 255, 255))  # 흰색 텍스트
 
                 # Pillow 이미지를 다시 OpenCV 이미지로 변환
