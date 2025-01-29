@@ -44,7 +44,7 @@ model.compile(optimizer=optimizer, loss='categorical_crossentropy', metrics=['ac
 
 # 콜백 설정
 early_stopping = EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)  # patience 값 조정 및 가중치 복원 추가
-checkpoint = ModelCheckpoint('best_model_z3.h5', monitor='val_loss', save_best_only=True)
+checkpoint = ModelCheckpoint('best_model_z4.h5', monitor='val_loss', save_best_only=True)
 reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=3)
 
 # 모델 학습
@@ -58,4 +58,4 @@ history = model.fit(
 )
 
 # 최종 모델 저장 (학습 종료 후 마지막 상태 저장)
-model.save('cnn_lstm_sign_language_model_optimized_3.h5')
+model.save('cnn_lstm_sign_language_model_optimized_4.h5')
