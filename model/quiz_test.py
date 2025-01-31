@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import mediapipe as mp
 import random
+import time
 from tensorflow.keras.models import load_model
 from PIL import ImageFont, ImageDraw, Image  # Pillow 라이브러리
 
@@ -16,6 +17,7 @@ GESTURES = ['ㄱ', 'ㄴ', 'ㄷ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅅ', 'ㅇ', 'ㅈ', 'ㅊ'
 
 SEQUENCE_LENGTH = 30  # 시퀀스 길이 (모델 입력)
 IMAGE_SIZE = (64, 64)  # 입력 이미지 크기 (모델 입력)
+TIME_LIMIT = 10  # 퀴즈 시간 제한 (초)
 
 # MediaPipe 초기화
 mp_hands = mp.solutions.hands
@@ -25,17 +27,21 @@ mp_drawing = mp.solutions.drawing_utils
 font_path = "/System/Library/Fonts/Supplemental/AppleSDGothicNeo.ttc"  # macOS 기준
 font = ImageFont.truetype(font_path, 32)  # 폰트 크기 설정
 
+
 # 2. 퀴즈 설정
 def get_new_quiz():
     """랜덤으로 새로운 퀴즈 문제를 선택"""
-    return random.choice(GESTURES)
+    return random.choice(GESTURES), time.time()  # 문제와 시작 시간 반환
 
-current_quiz = get_new_quiz()  # 첫 문제 선정
+
+current_quiz, start_time = get_new_quiz()  # 첫 문제 선정
 sequence = []  # 시퀀스를 저장할 리스트
-correct_count = 0  # 연속 성공 횟수
+feedback_text = ""  # 사용자 피드백 메시지 (맞았는지 여부)
+feedback_time = 0  # 피드백 메시지가 표시된 시간
 
 # 웹캠 실행
 cap = cv2.VideoCapture(0)
+
 
 def preprocess_landmarks(landmarks):
     """손 랜드마크를 (64x64) 이미지로 변환"""
@@ -46,19 +52,24 @@ def preprocess_landmarks(landmarks):
             frame_image[py, px] = 1  # z 값 없이 좌표만 사용
     return frame_image
 
+
 with mp_hands.Hands(min_detection_confidence=0.5, min_tracking_confidence=0.5) as hands:
     while cap.isOpened():
         ret, frame = cap.read()
         if not ret:
             break
 
+        # 현재 시간 확인
+        elapsed_time = time.time() - start_time
+        remaining_time = max(0, TIME_LIMIT - int(elapsed_time))  # 음수가 되지 않도록 제한
+
+        predicted_gesture = None  # 매 프레임마다 초기화
+
         # BGR -> RGB 변환 및 MediaPipe 처리
         image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         image.flags.writeable = False
         results = hands.process(image)
         image.flags.writeable = True
-
-        predicted_gesture = None  # 매 프레임마다 초기화
 
         # 랜드마크 추출 및 시각화
         if results.multi_hand_landmarks:
@@ -83,31 +94,36 @@ with mp_hands.Hands(min_detection_confidence=0.5, min_tracking_confidence=0.5) a
                     predicted_gesture_index = np.argmax(predictions)
                     predicted_gesture = GESTURES[predicted_gesture_index]
 
-                    # 예측된 제스처가 현재 퀴즈 문제와 일치하는지 확인
+                    # 정답 확인
                     if predicted_gesture == current_quiz:
-                        correct_count += 1
-                        if correct_count >= 5:  # 5번 연속 맞추면 다음 문제
-                            text_result = "맞았습니다! 다음 문제로 이동합니다."
-                            current_quiz = get_new_quiz()
-                            correct_count = 0  # 초기화
-                            sequence = []  # 새로운 문제 시작할 때 시퀀스 초기화
-                        else:
-                            text_result = f"좋아요! ({correct_count}/5)"
+                        feedback_text = " 맞았습니다~ 다음 문제로 이동합니다."
+                        feedback_time = time.time()  # 피드백 표시 시작 시간
+                        current_quiz, start_time = get_new_quiz()  # 새로운 문제 출제
+                        sequence = []  # 시퀀스 초기화
                     else:
-                        text_result = "더 노력해보세요!"
-                        correct_count = 0  # 틀리면 연속 카운트 초기화
+                        feedback_text = " 더 노력해보세요!"
+                        feedback_time = time.time()
 
-        else:
-            text_result = "제스처를 기다리는 중..."
-            correct_count = 0  # 손이 감지되지 않으면 연속 카운트 초기화
+        # 시간 초과 시 새로운 문제로 이동
+        if elapsed_time > TIME_LIMIT:
+            feedback_text = " 시간 초과! 다음 문제로 이동합니다."
+            feedback_time = time.time()
+            current_quiz, start_time = get_new_quiz()
+            sequence = []  # 시퀀스 초기화
 
         # 결과 출력: OpenCV 이미지를 Pillow 이미지로 변환하여 한글 출력
         frame_pil = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
         draw = ImageDraw.Draw(frame_pil)
 
-        # 현재 문제 출력
-        draw.text((10, 10), f"문제: {current_quiz}", font=font, fill=(255, 255, 255))
-        draw.text((10, 50), text_result, font=font, fill=(255, 255, 255))
+        # ⏳ 남은 시간 별도로 출력
+        draw.text((10, 10), f" 남은 시간: {remaining_time}초", font=font, fill=(0, 255, 255))
+
+        # 📝 현재 문제 표시
+        draw.text((10, 50), f" 문제: {current_quiz}", font=font, fill=(255, 255, 255))
+
+        # 🎯 피드백 문구 출력 (1초 유지)
+        if feedback_text and (time.time() - feedback_time <= 1):
+            draw.text((10, 100), feedback_text, font=font, fill=(255, 0, 0) if "!" in feedback_text else (0, 255, 0))
 
         frame = cv2.cvtColor(np.array(frame_pil), cv2.COLOR_RGB2BGR)
 
